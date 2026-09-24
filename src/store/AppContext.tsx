@@ -17,6 +17,7 @@ type AppContextValue = AppState & {
   addAdventure: (adventure: Adventure) => Promise<void>;
   completeTask: (adventureId: string, taskId: string) => Promise<void>;
   skipTask: (adventureId: string, taskId: string) => Promise<void>;
+  skipAdventure: (adventureId: string) => Promise<void>;
   finishAdventure: (adventureId: string) => Promise<void>;
   addWalkedDistance: (adventureId: string, meters: number) => Promise<void>;
   addVisitedPlace: (place: VisitedPlace) => Promise<void>;
@@ -149,6 +150,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   item.id !== taskId ? item : { ...item, status: 'skipped' as const },
                 ),
               },
+        );
+        await saveJSON(StorageKeys.adventures, next);
+        setState((prev) => ({ ...prev, adventures: next }));
+      },
+      skipAdventure: async (adventureId) => {
+        const next = state.adventures.map((adventure) =>
+          adventure.id !== adventureId
+            ? adventure
+            : { ...adventure, status: 'skipped' as const },
         );
         await saveJSON(StorageKeys.adventures, next);
         setState((prev) => ({ ...prev, adventures: next }));

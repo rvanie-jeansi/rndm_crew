@@ -56,6 +56,11 @@ export default function HomeScreen() {
   const [time, setTime] = useState<TimeBudget>('1h');
   const [money, setMoney] = useState<MoneyBudget>('mid');
 
+  const activeAdventure = adventures.find((item) => item.status === 'active');
+  const activeDone =
+    activeAdventure?.tasks.filter((item) => item.status === 'done').length ?? 0;
+  const activeTotal = activeAdventure?.tasks.length ?? 0;
+
   const generate = () => {
     const adventure = generateAdventure({
       time,
@@ -81,6 +86,49 @@ export default function HomeScreen() {
             Выбери время и бюджет — мы придумаем приключение рядом
           </ThemedText>
         </ThemedView>
+
+        {activeAdventure && (
+          <Pressable
+            onPress={() => router.push(`/adventure/${activeAdventure.id}`)}
+            style={({ pressed }) => [pressed && styles.pressed]}>
+            <ThemedView type="backgroundElement" style={styles.activeCard}>
+              <View style={styles.activeHeader}>
+                <ThemedText style={styles.activeEmoji}>{activeAdventure.emoji}</ThemedText>
+                <View style={styles.activeBody}>
+                  <ThemedText type="smallBold" themeColor="textSecondary">
+                    Активное приключение
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.activeTitle}>
+                    {activeAdventure.title}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Выполнено {activeDone} из {activeTotal} заданий
+                  </ThemedText>
+                  <View style={styles.activeTrack}>
+                    <View
+                      style={[
+                        styles.activeFill,
+                        {
+                          width: `${Math.round(
+                            (activeTotal > 0 ? activeDone / activeTotal : 0) * 100,
+                          )}%`,
+                          backgroundColor: theme.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.continueButton,
+                  { backgroundColor: theme.primary },
+                ]}>
+                <ThemedText style={styles.continueLabel}>Продолжить</ThemedText>
+              </View>
+            </ThemedView>
+          </Pressable>
+        )}
 
         <ThemedView type="backgroundElement" style={styles.optionsCard}>
           <ThemedText type="smallBold">Время</ThemedText>
@@ -172,6 +220,49 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Spacing.four,
+  },
+  activeCard: {
+    padding: Spacing.three,
+    borderRadius: Spacing.four,
+    gap: Spacing.three,
+  },
+  activeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  activeEmoji: {
+    fontSize: 40,
+    lineHeight: 48,
+  },
+  activeBody: {
+    flex: 1,
+    gap: Spacing.half,
+  },
+  activeTitle: {
+    fontWeight: 700,
+  },
+  activeTrack: {
+    height: 6,
+    borderRadius: Spacing.three,
+    backgroundColor: 'rgba(128, 128, 128, 0.25)',
+    overflow: 'hidden',
+    marginTop: Spacing.one,
+  },
+  activeFill: {
+    height: '100%',
+    borderRadius: Spacing.three,
+  },
+  continueButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.three,
+  },
+  continueLabel: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 700,
   },
   chips: {
     flexDirection: 'row',

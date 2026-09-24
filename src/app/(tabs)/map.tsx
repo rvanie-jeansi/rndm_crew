@@ -81,6 +81,11 @@ export default function MapScreen() {
                 Посещено мест: {visitedPlaces.length}
                 {locating && !current ? ' · ждём твою позицию…' : ''}
               </ThemedText>
+              {!adventure && visitedPlaces.length === 0 && (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Нажми «Сгенерировать!» на главной — на карте появятся цели маршрута.
+                </ThemedText>
+              )}
               {error && (
                 <ThemedText type="small" themeColor="danger">
                   {error}

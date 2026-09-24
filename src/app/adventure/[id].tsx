@@ -65,10 +65,12 @@ function TaskRow({ task, isCurrent }: { task: Task; isCurrent: boolean }) {
 export default function AdventureScreen() {
   const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
-  const { adventures, completeTask, skipTask, finishAdventure, addWalkedDistance } = useApp();
+  const { adventures, completeTask, skipTask, skipAdventure, finishAdventure, addWalkedDistance } =
+    useApp();
   const { current, start, stop } = useLocation();
 
   const [busy, setBusy] = useState(false);
+  const [skipConfirm, setSkipConfirm] = useState(false);
 
   const adventure = adventures.find((item) => item.id === params.id);
 
@@ -160,6 +162,39 @@ export default function AdventureScreen() {
   };
 
   const finish = () => act(() => finishAdventure(adventure.id));
+
+  const skipNow = () =>
+    act(async () => {
+      await skipAdventure(adventure.id);
+      router.replace('/(tabs)');
+    });
+
+  if (adventure.status === 'skipped') {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView edges={['bottom']} style={styles.centerSafe}>
+          <ThemedView style={styles.card}>
+            <ThemedText style={styles.successEmoji}>🚀</ThemedText>
+            <ThemedText type="subtitle" style={styles.centerText}>
+              Приключение пропущено
+            </ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.centerText}>
+              Ничего страшного — впереди много новых приключений
+            </ThemedText>
+            <Pressable
+              onPress={() => router.replace('/(tabs)')}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { backgroundColor: theme.accent },
+                pressed && styles.pressed,
+              ]}>
+              <ThemedText style={styles.primaryLabel}>На главную</ThemedText>
+            </Pressable>
+          </ThemedView>
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
 
   if (adventure.status === 'completed') {
     const earnedXp = adventure.tasks
@@ -314,6 +349,23 @@ export default function AdventureScreen() {
               <ThemedText style={styles.primaryLabel}>Завершить приключение</ThemedText>
             </Pressable>
           )}
+
+          {!allResolved && (
+            <Pressable
+              onPress={() => (skipConfirm ? skipNow() : setSkipConfirm(true))}
+              disabled={busy}
+              style={({ pressed }) => [
+                styles.skipAllButton,
+                pressed && styles.pressed,
+                busy && styles.disabled,
+              ]}>
+              <ThemedText type="smallBold" themeColor={skipConfirm ? 'danger' : 'textSecondary'}>
+                {skipConfirm
+                  ? 'Точно пропустить всё приключение? Нажми ещё раз'
+                  : 'Пропустить всё приключение'}
+              </ThemedText>
+            </Pressable>
+          )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -441,6 +493,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.five,
+    marginTop: Spacing.one,
+  },
+  skipAllButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.two + Spacing.one,
     marginTop: Spacing.one,
   },
   primaryLabel: {
