@@ -1,8 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { unlockAchievements } from '@/engine/achievements';
+import { isBackendConfigured } from '@/supabase/client';
+import { pushState } from '@/supabase/sync';
 import { loadJSON, saveJSON, StorageKeys } from '@/store/storage';
 import { defaultStats, type Adventure, type Profile, type Stats, type VisitedPlace } from '@/types';
+
+export type SyncStatus = 'off' | 'syncing' | 'synced' | 'offline';
 
 type AppState = {
   profile: Profile | null;
@@ -21,6 +25,9 @@ type AppContextValue = AppState & {
   finishAdventure: (adventureId: string) => Promise<void>;
   addWalkedDistance: (adventureId: string, meters: number) => Promise<void>;
   addVisitedPlace: (place: VisitedPlace) => Promise<void>;
+  syncStatus: SyncStatus;
+  isBackendConfigured: boolean;
+  syncNow: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -76,6 +83,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 500);
     return () => clearTimeout(timeout);
   }, [state.stats, state.isHydrated]);
+
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('off');
+
+  const withProfile = state.profile;
+
+  useEffect(() => {
+    if (!state.isHydrated || syncStatus !== 'synced' || !withProfile) return;
+    const timeout = setTimeout(() => {
+      void pushState({
+        profile: withProfile,
+        stats: state.stats,
+        visitedPlaces: state.visitedPlaces,
+        adventures: state.adventures,
+      }).then((ok) => {
+        if (!ok) setSyncStatus('offline');
+      });
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [
+    withProfile,
+    state.adventures,
+    state.stats,
+    state.visitedPlaces,
+    state.isHydrated,
+    syncStatus,
+  ]);
 
   const updateStats = (patch: (prev: Stats) => Stats) => {
     setState((prev) => {
@@ -203,8 +236,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
           totalPlacesVisited: prev.totalPlacesVisited + 1,
         }));
       },
+      syncStatus,
+      isBackendConfigured,
+      syncNow: async () => {
+        if (!isBackendConfigured || !state.profile) return;
+        setSyncStatus('syncing');
+        const ok = await pushState({
+          profile: state.profile,
+          stats: state.stats,
+          visitedPlaces: state.visitedPlaces,
+          adventures: state.adventures,
+        });
+        setSyncStatus(ok ? 'synced' : 'offline');
+      },
     };
-  }, [state]);
+  }, [state, syncStatus]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

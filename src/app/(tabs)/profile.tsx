@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -13,7 +13,7 @@ import { levelFromXp } from '@/utils/levels';
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const { profile, stats } = useApp();
+  const { profile, stats, syncStatus, isBackendConfigured, syncNow } = useApp();
 
   const { level, currentXp, neededXp } = levelFromXp(stats.xp);
   const progress = Math.min(1, currentXp / neededXp);
@@ -102,6 +102,42 @@ export default function ProfileScreen() {
               </ThemedText>
             </ThemedView>
           </View>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <View style={styles.syncHeader}>
+              <ThemedText type="smallBold">Облачная синхронизация</ThemedText>
+              {syncStatus === 'synced' && (
+                <ThemedText type="smallBold" style={{ color: theme.success }}>
+                  ✓
+                </ThemedText>
+              )}
+            </View>
+            {!isBackendConfigured ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                Бэкенд не настроен. Скопируй .env.example в .env и укажи данные Supabase.
+              </ThemedText>
+            ) : (
+              <Pressable
+                onPress={syncNow}
+                disabled={syncStatus === 'syncing'}
+                style={({ pressed }) => [
+                  styles.syncButton,
+                  { backgroundColor: theme.primary },
+                  pressed && styles.syncPressed,
+                  syncStatus === 'syncing' && styles.syncDisabled,
+                ]}>
+                <ThemedText style={styles.syncLabel}>
+                  {syncStatus === 'synced'
+                    ? 'Синхронизировано · Обновить'
+                    : syncStatus === 'syncing'
+                      ? 'Синхронизируем…'
+                      : syncStatus === 'offline'
+                        ? 'Нет соединения · Повторить'
+                        : 'Включить облачную синхронизацию'}
+                </ThemedText>
+              </Pressable>
+            )}
+          </ThemedView>
 
           <ThemedText type="smallBold" style={styles.sectionLabel}>
             Достижения · {unlockedSet.size} из {ACHIEVEMENTS.length}
@@ -193,6 +229,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  syncHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  syncButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    marginTop: Spacing.one,
+  },
+  syncPressed: {
+    opacity: 0.8,
+  },
+  syncDisabled: {
+    opacity: 0.6,
+  },
+  syncLabel: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 700,
   },
   levelBadge: {
     paddingVertical: Spacing.one,
