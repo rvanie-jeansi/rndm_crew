@@ -13,6 +13,7 @@ type AppState = {
 
 type AppContextValue = AppState & {
   completeOnboarding: (input: { name: string; emoji: string; interests: string[] }) => Promise<void>;
+  addAdventure: (adventure: Adventure) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -70,6 +71,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ]);
 
         setState((prev) => ({ ...prev, profile, stats: defaultStats }));
+      },
+      addAdventure: async (adventure) => {
+        await saveJSON(StorageKeys.adventures, [adventure, ...state.adventures]);
+        setState((prev) => ({
+          ...prev,
+          adventures: [adventure, ...prev.adventures],
+        }));
       },
     };
   }, [state]);
