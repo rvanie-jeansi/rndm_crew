@@ -44,6 +44,7 @@ export type Adventure = {
   createdAt: string;
   completedAt?: string;
   totalDistanceMeters: number;
+  walkedDistanceMeters?: number;
   scenarioId?: string;
 };
 

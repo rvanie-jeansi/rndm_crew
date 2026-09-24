@@ -32,6 +32,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RANDOM использует твою геопозицию, чтобы строить маршруты и считать пройденные метры"
+        }
       ]
     ],
     "experiments": {

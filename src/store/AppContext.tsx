@@ -17,6 +17,8 @@ type AppContextValue = AppState & {
   completeTask: (adventureId: string, taskId: string) => Promise<void>;
   skipTask: (adventureId: string, taskId: string) => Promise<void>;
   finishAdventure: (adventureId: string) => Promise<void>;
+  addWalkedDistance: (adventureId: string, meters: number) => Promise<void>;
+  addVisitedPlace: (place: VisitedPlace) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -56,6 +58,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    const timeout = setTimeout(() => {
+      void saveJSON(StorageKeys.adventures, state.adventures);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [state.adventures, state.isHydrated]);
 
   const value = useMemo<AppContextValue>(() => {
     return {
@@ -122,6 +132,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         await saveJSON(StorageKeys.adventures, next);
         setState((prev) => ({ ...prev, adventures: next }));
+      },
+      addWalkedDistance: async (adventureId, meters) => {
+        setState((prev) => ({
+          ...prev,
+          adventures: prev.adventures.map((adventure) =>
+            adventure.id !== adventureId
+              ? adventure
+              : {
+                  ...adventure,
+                  walkedDistanceMeters:
+                    (adventure.walkedDistanceMeters ?? 0) + meters,
+                },
+          ),
+        }));
+      },
+      addVisitedPlace: async (place) => {
+        const next = [place, ...state.visitedPlaces];
+        await saveJSON(StorageKeys.visitedPlaces, next);
+        setState((prev) => ({ ...prev, visitedPlaces: next }));
       },
     };
   }, [state]);

@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,9 +7,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useLocation } from '@/hooks/use-location';
 import { useApp } from '@/store/AppContext';
-import type { MoneyBudget, Task, TaskType, TimeBudget } from '@/types';
+import type { GeoPoint, MoneyBudget, Task, TaskType, TimeBudget } from '@/types';
 import { formatDistance } from '@/utils/format';
+import { haversineMeters } from '@/utils/geo';
 
 const TASK_EMOJI: Record<TaskType, string> = {
   walk: '🚶',
@@ -63,11 +65,59 @@ function TaskRow({ task, isCurrent }: { task: Task; isCurrent: boolean }) {
 export default function AdventureScreen() {
   const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
-  const { adventures, completeTask, skipTask, finishAdventure } = useApp();
+  const { adventures, completeTask, skipTask, finishAdventure, addWalkedDistance } = useApp();
+  const { current, start, stop } = useLocation();
 
   const [busy, setBusy] = useState(false);
 
   const adventure = adventures.find((item) => item.id === params.id);
+
+  const adventureIdRef = useRef(adventure?.id);
+  const addWalkedDistanceRef = useRef(addWalkedDistance);
+  const lastPointRef = useRef<GeoPoint | null>(null);
+  const dirtyMetersRef = useRef(0);
+
+  useEffect(() => {
+    adventureIdRef.current = adventure?.id;
+    addWalkedDistanceRef.current = addWalkedDistance;
+  });
+
+  const active = adventure?.status === 'active';
+
+  useEffect(() => {
+    if (!active) return;
+    void start();
+    return () => {
+      const adventureId = adventureIdRef.current;
+      if (adventureId && dirtyMetersRef.current >= 1) {
+        const delta = Math.round(dirtyMetersRef.current);
+        dirtyMetersRef.current = 0;
+        void addWalkedDistanceRef.current(adventureId, delta);
+      }
+      stop();
+    };
+  }, [active, start, stop]);
+
+  useEffect(() => {
+    if (!active || !current) {
+      lastPointRef.current = null;
+      return;
+    }
+    const previous = lastPointRef.current;
+    if (previous) {
+      const meters = haversineMeters(previous, current);
+      if (meters >= 1 && meters <= 300) {
+        dirtyMetersRef.current += meters;
+      }
+    }
+    lastPointRef.current = current;
+    const adventureId = adventureIdRef.current;
+    if (adventureId && dirtyMetersRef.current >= 25) {
+      const delta = Math.round(dirtyMetersRef.current);
+      dirtyMetersRef.current = 0;
+      void addWalkedDistanceRef.current(adventureId, delta);
+    }
+  }, [active, current]);
 
   if (!adventure) {
     return (
@@ -173,6 +223,11 @@ export default function AdventureScreen() {
                   {adventure.totalDistanceMeters
                     ? `~${formatDistance(adventure.totalDistanceMeters)}`
                     : 'без дистанции'}
+                </ThemedText>
+              </ThemedView>
+              <ThemedView type="backgroundSelected" style={styles.metaChip}>
+                <ThemedText type="small">
+                  Пройдено: {formatDistance(adventure.walkedDistanceMeters ?? 0)}
                 </ThemedText>
               </ThemedView>
             </View>
