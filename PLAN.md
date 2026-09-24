@@ -105,7 +105,8 @@ Stats        { totalAdventures, completedAdventures, totalDistanceMeters,
 ## 8. Этапы (коммит+пуш в конце каждого; в конце каждого — проверка на телефоне + `npx tsc --noEmit`)
 
 ### Этап 0 — Создание проекта + основы RN
-- [ ] create-expo-app (TS-шаблон со стандартным Expo Router), запуск в Expo Go
+- [x] create-expo-app (TS-шаблон со стандартным Expo Router, SDK 57)
+- [ ] запуск в Expo Go (проверяется на телефоне пользователя)
 - [ ] Разбор структуры и базовых понятий (JSX, компоненты, props, state, StyleSheet, навигация)
 - ✅ Готово = приложение открывается на телефоне
 
