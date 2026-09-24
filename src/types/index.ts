@@ -64,6 +64,7 @@ export type Stats = {
   totalPlacesVisited: number;
   totalTasksDone: number;
   xp: number;
+  achievements: string[];
 };
 
 export const defaultStats: Stats = {
@@ -73,4 +74,5 @@ export const defaultStats: Stats = {
   totalPlacesVisited: 0,
   totalTasksDone: 0,
   xp: 0,
+  achievements: [],
 };

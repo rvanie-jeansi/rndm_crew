@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { unlockAchievements } from '@/engine/achievements';
 import { loadJSON, saveJSON, StorageKeys } from '@/store/storage';
 import { defaultStats, type Adventure, type Profile, type Stats, type VisitedPlace } from '@/types';
 
@@ -49,7 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         profile,
         adventures: adventures ?? [],
         visitedPlaces: visitedPlaces ?? [],
-        stats: stats ?? defaultStats,
+        stats: { ...defaultStats, ...(stats ?? {}) },
         isHydrated: true,
       });
     })();
@@ -66,6 +67,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 500);
     return () => clearTimeout(timeout);
   }, [state.adventures, state.isHydrated]);
+
+  useEffect(() => {
+    if (!state.isHydrated) return;
+    const timeout = setTimeout(() => {
+      void saveJSON(StorageKeys.stats, state.stats);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [state.stats, state.isHydrated]);
+
+  const updateStats = (patch: (prev: Stats) => Stats) => {
+    setState((prev) => {
+      const stats = unlockAchievements(patch(prev.stats), prev.adventures);
+      return { ...prev, stats };
+    });
+  };
 
   const value = useMemo<AppContextValue>(() => {
     return {
@@ -91,6 +107,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...prev,
           adventures: [adventure, ...prev.adventures],
         }));
+        updateStats((prev) => ({
+          ...prev,
+          totalAdventures: prev.totalAdventures + 1,
+        }));
       },
       completeTask: async (adventureId, taskId) => {
         const now = new Date().toISOString();
@@ -106,8 +126,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 ),
               },
         );
+        const task = next.find((adventure) => adventure.id === adventureId)?.tasks.find(
+          (item) => item.id === taskId,
+        );
         await saveJSON(StorageKeys.adventures, next);
         setState((prev) => ({ ...prev, adventures: next }));
+        if (task) {
+          updateStats((prev) => ({
+            ...prev,
+            totalTasksDone: prev.totalTasksDone + 1,
+            xp: prev.xp + task.xp,
+          }));
+        }
       },
       skipTask: async (adventureId, taskId) => {
         const next = state.adventures.map((adventure) =>
@@ -130,8 +160,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ? adventure
             : { ...adventure, status: 'completed' as const, completedAt: now },
         );
+        const walked = next.find((adventure) => adventure.id === adventureId)
+          ?.walkedDistanceMeters;
         await saveJSON(StorageKeys.adventures, next);
         setState((prev) => ({ ...prev, adventures: next }));
+        updateStats((prev) => ({
+          ...prev,
+          completedAdventures: prev.completedAdventures + 1,
+          totalDistanceMeters: prev.totalDistanceMeters + (walked ?? 0),
+        }));
       },
       addWalkedDistance: async (adventureId, meters) => {
         setState((prev) => ({
@@ -151,6 +188,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const next = [place, ...state.visitedPlaces];
         await saveJSON(StorageKeys.visitedPlaces, next);
         setState((prev) => ({ ...prev, visitedPlaces: next }));
+        updateStats((prev) => ({
+          ...prev,
+          totalPlacesVisited: prev.totalPlacesVisited + 1,
+        }));
       },
     };
   }, [state]);
