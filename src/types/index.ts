@@ -1,6 +1,6 @@
 export type TaskType = 'walk' | 'find_place' | 'photo' | 'visit_cafe' | 'roll_dice' | 'question';
 
-export type TaskStatus = 'pending' | 'done';
+export type TaskStatus = 'pending' | 'done' | 'skipped';
 
 export type GeoPoint = {
   lat: number;

@@ -14,6 +14,9 @@ type AppState = {
 type AppContextValue = AppState & {
   completeOnboarding: (input: { name: string; emoji: string; interests: string[] }) => Promise<void>;
   addAdventure: (adventure: Adventure) => Promise<void>;
+  completeTask: (adventureId: string, taskId: string) => Promise<void>;
+  skipTask: (adventureId: string, taskId: string) => Promise<void>;
+  finishAdventure: (adventureId: string) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -78,6 +81,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...prev,
           adventures: [adventure, ...prev.adventures],
         }));
+      },
+      completeTask: async (adventureId, taskId) => {
+        const now = new Date().toISOString();
+        const next = state.adventures.map((adventure) =>
+          adventure.id !== adventureId
+            ? adventure
+            : {
+                ...adventure,
+                tasks: adventure.tasks.map((item) =>
+                  item.id !== taskId
+                    ? item
+                    : { ...item, status: 'done' as const, doneAt: now },
+                ),
+              },
+        );
+        await saveJSON(StorageKeys.adventures, next);
+        setState((prev) => ({ ...prev, adventures: next }));
+      },
+      skipTask: async (adventureId, taskId) => {
+        const next = state.adventures.map((adventure) =>
+          adventure.id !== adventureId
+            ? adventure
+            : {
+                ...adventure,
+                tasks: adventure.tasks.map((item) =>
+                  item.id !== taskId ? item : { ...item, status: 'skipped' as const },
+                ),
+              },
+        );
+        await saveJSON(StorageKeys.adventures, next);
+        setState((prev) => ({ ...prev, adventures: next }));
+      },
+      finishAdventure: async (adventureId) => {
+        const now = new Date().toISOString();
+        const next = state.adventures.map((adventure) =>
+          adventure.id !== adventureId
+            ? adventure
+            : { ...adventure, status: 'completed' as const, completedAt: now },
+        );
+        await saveJSON(StorageKeys.adventures, next);
+        setState((prev) => ({ ...prev, adventures: next }));
       },
     };
   }, [state]);
