@@ -25,3 +25,11 @@ export async function saveJSON(key: string, value: unknown): Promise<void> {
     // Ошибки записи не должны ронять UI: молча пропускаем.
   }
 }
+
+export async function clearStorage(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove(Object.values(StorageKeys));
+  } catch {
+    // Ошибки очистки не должны ронять UI: молча пропускаем.
+  }
+}

@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { unlockAchievements } from '@/engine/achievements';
-import { isBackendConfigured } from '@/supabase/client';
+import { isBackendConfigured, supabase } from '@/supabase/client';
 import { pushState } from '@/supabase/sync';
-import { loadJSON, saveJSON, StorageKeys } from '@/store/storage';
+import { clearStorage, loadJSON, saveJSON, StorageKeys } from '@/store/storage';
 import { defaultStats, type Adventure, type Profile, type Stats, type VisitedPlace } from '@/types';
 
 export type SyncStatus = 'off' | 'syncing' | 'synced' | 'offline';
@@ -28,6 +28,7 @@ type AppContextValue = AppState & {
   syncStatus: SyncStatus;
   isBackendConfigured: boolean;
   syncNow: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -248,6 +249,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
           adventures: state.adventures,
         });
         setSyncStatus(ok ? 'synced' : 'offline');
+      },
+      logout: async () => {
+        if (supabase) {
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // Выход из облачной сессии не должен блокировать сброс локальных данных.
+          }
+        }
+        setSyncStatus('off');
+        setState({
+          profile: null,
+          adventures: [],
+          visitedPlaces: [],
+          stats: defaultStats,
+          isHydrated: true,
+        });
+        await clearStorage();
       },
     };
   }, [state, syncStatus]);

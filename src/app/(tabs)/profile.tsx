@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,7 +14,8 @@ import { levelFromXp } from '@/utils/levels';
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const { profile, stats, syncStatus, isBackendConfigured, syncNow } = useApp();
+  const { profile, stats, syncStatus, isBackendConfigured, syncNow, logout } = useApp();
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
 
   const { level, currentXp, neededXp } = levelFromXp(stats.xp);
   const progress = Math.min(1, currentXp / neededXp);
@@ -137,6 +139,32 @@ export default function ProfileScreen() {
                 </ThemedText>
               </Pressable>
             )}
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="smallBold">Аккаунт</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Выйти из аккаунта: профиль, приключения и статистика будут удалены с этого
+              устройства.
+            </ThemedText>
+            <Pressable
+              onPress={() => {
+                if (!logoutConfirm) {
+                  setLogoutConfirm(true);
+                  return;
+                }
+                setLogoutConfirm(false);
+                void logout();
+              }}
+              style={({ pressed }) => [
+                styles.syncButton,
+                { backgroundColor: theme.danger },
+                pressed && styles.syncPressed,
+              ]}>
+              <ThemedText style={styles.syncLabel}>
+                {logoutConfirm ? 'Точно выйти? Нажми ещё раз' : 'Выйти из аккаунта'}
+              </ThemedText>
+            </Pressable>
           </ThemedView>
 
           <ThemedText type="smallBold" style={styles.sectionLabel}>
